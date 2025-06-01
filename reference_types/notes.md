@@ -67,4 +67,13 @@ College* third_college_ptr = oxford + 2;
 
 - “References are safer, more convenient versions of pointers. You declare references with the & declarator appended to the type name. References cannot be assigned to null (easily), and they cannot be reseated (or reassigned). These characteristics eliminate some bugs endemic to pointers.”
 
-- 
+## Usage of Pointers and References
+
+- “Pointers and references are largely interchangeable, but both have trade-offs. If you must sometimes change your reference type’s value—that is, if you must change what your reference type refers to—you must use a pointer. Many data structures (including forward-linked lists) require that you be able to change a pointer’s value. Because references cannot be reseated and they shouldn’t generally be assigned to nullptr, they’re sometimes not suitable.”
+
+### *Forward-Linked Lists*: The Canonical Pointer-Based Data Structure
+
+- “A forward-linked list is a simple data structure made up of a series of elements. Each element holds a pointer to the next element. The last element in the linked list holds a nullptr. Inserting elements into a linked list is very efficient, and elements can be discontinuous in memory”
+
+    ![Inserting Element into Linked List](./assets/image.png)
+

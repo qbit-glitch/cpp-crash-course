@@ -140,4 +140,164 @@ NOTE: “In practice, your program’s operating environment might clean up leak
 
 - “The other option for communicating error conditions is to return an error code as part of a function’s prototype. These two approaches are complementary. In situations where an error occurs that can be dealt with locally or that is expected to occur during the normal course of a program’s execution, you generally return an error code.”
 
+- Exceptions use inheritance relationships to determine whether a handler catches an exception. Handlers will catch a given type and any of its childrens' types.
+
 ### The *throw* keyword
+
+- “To throw an exception, use the throw keyword followed by a throwable object."
+
+- "Most objects are throwable. But it’s good practice to use one of the exceptions available in stdlib, such as std::runtime_error in the <stdexcept> header. The runtime_error constructor accepts a null-terminated const char* describing the nature of the error condition. You can retrieve this message via the what method, which takes no parameters.”
+
+- [exception_example.cpp](./exception_example.cpp)
+
+    “When you invoked forget with the argument 0xC0DE ➋, groucho printed Forgot 0xc0de and returned. When you invoked forget with the argument 0xFACE ➌, groucho threw an exception. This exception stopped normal program execution, so forget is never invoked again ➍. Instead, the in-flight exception is caught ➎, and its message is printed ➏”
+
+### Some brief idea about inheritance
+
+    ![Inheritance Concept](./assets/inheritance_concept.png)
+
+## *stdlib* Exception Classes
+
+- “Inheritance has a big impact on how the code handles exceptions. There is a nice, simple hierarchy of existing exception types available for use in the stdlib.”
+
+### Standard Exception Classes
+
+- “The stdlib provides you with the standard exception classes in the <stdexcept> header. These should be your first port of call when you’re programming exceptions. The superclass for all the standard exception classes is the class std::exception. All the subclasses in std::exception can be partitioned into three groups: logic errors, runtime errors, and language support errors.”
+
+    ![Stdlib exceptions](./assets/stdlib_exceptions.png)
+
+### Logic Errors
+
+- **Class Invariant** : 
+    - A class invariant in C++ is a property that must always hold for an object of that class. It ensures that the object remains in a valid state throughout its lifetime, from the time the constructor is called until the destructor is executed. Methods of the class should preserve the invariant, although they may temporarily break it during execution as long as it is restored before the method ends.
+
+    - For example, in the std::vector class, a class invariant could be that the size of the vector (the number of elements it contains) is always less than or equal to its capacity (the number of elements storage has been allocated for).
+
+- “Logic errors derive from the logic_error class. A primary example is when a logical precondition of a class isn’t satisfied, such as when a class invariant cannot be established.”
+
+- “You can use a class constructor to check for various conditions, and if you cannot establish a class invariant, you can throw an exception. If the failure is the result of, say, passing an incorrect parameter to the constructor, a logic_error is an appropriate exception to throw.”
+
+- The logic_error has several subclasses that you should be aware of:
+
+    - The `domain_error` reports errors related to valid input range, especially for math functions. The square root, for example, only supports non-negative numbers (in the real case). If a negative argument is passed, a square root function could throw a domain_error.
+    - The `invalid_argument` exception reports generally unexpected arguments.
+    - The `length_error` exception reports that some action would violate a maximum size constraint.
+    - The `out_of_range` exception reports that some value isn’t in an expected range. The canonical example is bounds-checked indexing into a data structure.
+
+
+### Runtime Errors
+
+- “Runtime errors derive from the runtime_error class. These exceptions help you report error conditions that are outside the program’s scope”
+
+- `runtime_error` has some subclasses that you might find useful:
+
+    - The `system_error` reports that the operating system encountered some error. You can get a lot of mileage out of this kind of exception. Inside of the <system_error> header, there’s a large number of error codes and error conditions. When a `system_error` is constructed, information about the error is packed in so you can determine the nature of the error. The `.code()` method returns an enum class of type `std::errc` that has a large number of values, such as `bad_file_descriptor`, `timed_out`, and `permission_denied`.
+    - The `overflow_error` and `underflow_error` report arithmetic overflow and underflow, respectively.
+
+- “Other errors inherit directly from exception. A common one is the `bad_alloc` exception, which reports that `new` failed to allocate the required memory for dynamic storage.”
+
+### Language Support Errors
+
+- “You won’t use language support errors directly. They exist to indicate that some core language feature failed at runtime.”
+
+
+## Handling Exceptions
+
+- “The rules for exception handling are based on class inheritance. When an exception is thrown, a catch block handles the exception if the thrown exception’s type matches the catch handler’s exception type or if the thrown exception’s type inherits from the catch handler’s exception type.”
+
+- “Special handlers are typically used as a safety mechanism to log the program’s catastrophic failure to catch an exception of a specific type.”
+
+- “You can handle different types of exceptions originating from the same try block by chaining together catch statements.”
+
+
+- eg: 
+    ```cpp
+    try {
+        // Code that might throw an exception
+        -- snip --
+    } 
+    catch (const std::logic_error& ex){
+        // Log exception and terminate the program; There is a programming error!
+        -- snip --
+    }
+    catch (const std::runtime_error& ex){
+        // Do our best to recover gracefully
+        -- snip --
+    }
+    catch (const std::exception& ex){
+        // This will hand;e any exception that derives from std::exception 
+        // that is not a logic or a runtime_error
+        -- snip --
+    }
+    catch (...){
+        // Panic; un unforeseen exception type was thrown
+        -- snip --
+    }
+
+- “Rather than rethrowing, you can define a new exception type and create a separate catch handler for the `EACCES` error.”
+
+    ```cpp
+    try {
+        // Throw a PermissionDenied instead
+        -- snip --
+    } catch (const PermissionDenied& ex){
+        // Recover from an EACCES error (Permission denied error)
+        -- snip --
+    }
+
+
+### User Defined Exceptions
+
+- “You can define your own exceptions whenever you’d like; usually, these user-defined exceptions inherit from `std::exception`. All the classes from stdlib use exceptions that derive from `std::exception`. This makes it easy to catch all exceptions, whether from your code or from the stdlib, with a single catch block.”
+
+### The `noexcept` keyword
+
+- “You can, and should, mark any function that cannot possibly throw an exception `noexcept`.”
+    ```cpp
+    bool is_odd(int x) noexcept{
+        return 1 == (x % 2);
+    }
+    ```
+
+- “Functions marked noexcept make a rigid contract. When you’re using a function marked noexcept, you can rest assured that the function cannot throw an exception. In exchange, you must be extremely careful when you mark your own function noexcept, since the compiler won’t check for you. If your code throws an exception inside a function marked noexcept, it’s bad juju. The C++ runtime will call the function std::terminate, a function that by default will exit the program via abort. Your program cannot recove”
+
+    ```cpp
+    void hari_kari() noexcept{
+        throw std::runtime_error {"Goodbye, cruel world."};
+    }
+    ```
+
+NOTE: “Check out Item 14 of Effective Modern C++ by Scott Meyers for a thorough discussion of noexcept. The gist is that some move constructors and move assignment operators might throw an exception, for example, if they need to allocate memory and the system is out. Unless a move constructor or move assignment operator specifies otherwise, the compiler must assume that a move could cause an exception. This disables certain optimizations.”
+
+## Call Stacks and Exceptions
+
+- “The call stack is a runtime structure that stores information about active functions. When a piece of code (the caller) invokes a function (the callee), the machine keeps track of who called whom by pushing information onto the call stack. This allows programs to have many function calls nested within each other. The callee could then, in turn, become the caller by invoking another function.”
+
+### Stacks
+
+- “A stack is a flexible data container that can hold a dynamic number of elements. There are two essential operations that all stacks support: pushing elements onto the top of the stack and popping those elements off. It is a last-in, first-out data structure”
+
+- “As its name suggests, the call stack is functionally similar to its namesake data container. Each time a function is invoked, information about the function invocation is arranged into a stack frame and pushed onto the call stack. Because a new stack frame is pushed onto the stack for every function call, a callee is free to call other functions, forming arbitrarily deep call chains. Whenever a function returns, its stack frame is popped off the top of the call stack, and execution control resumes as indicated by the previous stack frame”
+
+    ![Stack](./assets/stacks.png)
+
+
+### Call Stacks and Exception Handling
+
+- “The runtime seeks the closest exception handler to a thrown exception. If there is a matching exception handler in the current stack frame, it will handle the exception. If no matching handler is found, the runtime will unwind the call stack until it finds a suitable handler. Any objects whose lifetimes end are destroyed in the usual way.”
+
+
+### Throwing in Destructors
+
+- If you throw an exception in a destructor, you are juggling with chainsaws. Such an exception absolutely must be caught within the destructor.
+
+- “Suppose an exception is thrown, and during stack unwinding, another exception is thrown by a destructor during normal cleanup. Now you have two exceptions in flight. How should the C++ runtime handle such a situation?”
+
+- As a general rule, treat destructors as if they were `noexcept`.
+
+- [throwing_in_destructors.cpp](./)
+
+
+## A SimpleString Class
+
+- 
